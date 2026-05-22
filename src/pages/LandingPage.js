@@ -1,9 +1,24 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import illustration from '../assets/illustrations/LandingPage-illustration.svg';
 
 function LandingPage() {
   const navigate = useNavigate();
+  const [showIOSBanner, setShowIOSBanner] = useState(false);
+
+  useEffect(() => {
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isStandalone = window.navigator.standalone === true;
+    const dismissed = sessionStorage.getItem('iosBannerDismissed');
+    if (isIOS && !isStandalone && !dismissed) {
+      setShowIOSBanner(true);
+    }
+  }, []);
+
+  const dismissBanner = () => {
+    sessionStorage.setItem('iosBannerDismissed', 'true');
+    setShowIOSBanner(false);
+  };
 
   return (
     <div style={{
@@ -109,7 +124,52 @@ function LandingPage() {
             </span>
           </div>
         </div>
+
       </div>
+
+      {/* iOS Install Banner */}
+      {showIOSBanner && (
+        <div style={{
+          position: 'fixed',
+          bottom: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '85%',
+          backgroundColor: '#203418',
+          borderRadius: '16px',
+          padding: '12px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '10px',
+          zIndex: 1000,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '20px' }}>📲</span>
+            <div>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#FFFFFF' }}>
+                Add to Home Screen
+              </div>
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>
+                Tap Share → "Add to Home Screen" for the best experience
+              </div>
+            </div>
+          </div>
+          <div
+            onClick={dismissBanner}
+            style={{
+              color: 'rgba(255,255,255,0.7)',
+              fontSize: '18px',
+              cursor: 'pointer',
+              flexShrink: 0,
+              padding: '4px',
+            }}>
+            ✕
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
