@@ -109,20 +109,6 @@ function LandingPage() {
             </span>
           </div>
         </div>
-
-        {/* Continue as Guest */}
-        <div
-          onClick={() => navigate('/dashboard')}
-          style={{
-            fontSize: '12px',
-            fontWeight: 700,
-            color: '#000000',
-            cursor: 'pointer',
-            textDecoration: 'underline'
-          }}>
-          Continue as Guest?
-        </div>
-
       </div>
     </div>
   );

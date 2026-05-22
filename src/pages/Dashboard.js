@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase/config';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import BottomNav from '../components/BottomNav';
 import emptyIllustration1 from '../assets/illustrations/EmptyDashboard2-illustration.svg';
 import emptyIllustration2 from '../assets/illustrations/EmptyDashboard1-illustration.svg';
@@ -50,6 +50,7 @@ function Dashboard() {
       setLoading(false);
     }
   }, []);
+  const todayKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 const parseLocalDate = (dateStr) => {
     if (!dateStr) return null;
     const [year, month, day] = String(dateStr).split('-').map(Number);
@@ -65,6 +66,26 @@ const parseLocalDate = (dateStr) => {
       console.error(e);
     }
     setLoading(false);
+  };
+  const handleToggleHabit = async (habit) => {
+    const logs = habit.logs || [];
+    const isDone = logs.includes(todayKey);
+    const newLogs = isDone ? logs.filter(l => l !== todayKey) : [...logs, todayKey];
+    try {
+      const { updateDoc, doc } = await import('firebase/firestore');
+      await updateDoc(doc(db, 'habits', habit.id), { logs: newLogs });
+      setHabits(habits.map(h => h.id === habit.id ? { ...h, logs: newLogs } : h));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+  const handleCompleteTask = async (task) => {
+    try {
+      await updateDoc(doc(db, 'tasks', task.id), { completed: !task.completed });
+      setTasks(tasks.map(t => t.id === task.id ? { ...t, completed: !t.completed } : t));
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   // Task filtering
@@ -133,13 +154,21 @@ const upcomingTasks = tasks
     );
   };
 
-  const TaskRow = ({ task }) => (
+const TaskRow = ({ task }) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 0' }}>
-      <div style={{
-        width: '24px', height: '24px', borderRadius: '50%',
-        border: '2px solid #7C972F', flexShrink: 0,
-      }} />
-      <span style={{ fontSize: '14px', fontWeight: 700, color: '#203418', flex: 1 }}>
+      <div
+        onClick={() => handleCompleteTask(task)}
+        style={{
+          width: '24px', height: '24px', borderRadius: '50%',
+          border: '2px solid #7C972F', flexShrink: 0,
+          backgroundColor: task.completed ? '#7C972F' : 'transparent',
+          cursor: 'pointer',
+        }}
+      />
+      <span style={{
+        fontSize: '14px', fontWeight: 700, color: '#203418', flex: 1,
+        textDecoration: task.completed ? 'line-through' : 'none',
+      }}>
         {task.title}
       </span>
       <div style={{
@@ -267,22 +296,40 @@ const upcomingTasks = tasks
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
             {/* Habits quick mark - only if habits exist */}
-            {habits.length > 0 && (
-              <div>
-                <SectionHeader title="Mark Your Habits!" />
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                  {habits.slice(0, 6).map(habit => (
-                    <div key={habit.id} style={{
-                      backgroundColor: habit.color || '#B2EBF2',
-                      borderRadius: '30px', padding: '8px 16px',
-                      fontSize: '13px', fontWeight: 600, cursor: 'pointer',
-                    }}>
-                      {habit.icon} {habit.name}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+{habits.length > 0 && habits.some(h => !(h.logs || []).includes(todayKey)) && (
+  <div>
+    <div style={{ fontSize: '16px', fontWeight: 700, color: '#203418', marginBottom: '12px', textAlign: 'center' }}>
+      Mark Your Habits!
+    </div>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '8px' }}>
+      {habits.slice(0, 3).map(habit => {
+        const isDone = (habit.logs || []).includes(todayKey);
+        if (isDone) return null;
+        return (
+          <div
+            key={habit.id}
+            onClick={() => handleToggleHabit(habit)}
+            style={{
+              backgroundColor: habit.color || '#BCE4F7',
+              borderRadius: '30px', padding: '8px 16px',
+              fontSize: '13px', fontWeight: 600,
+              cursor: 'pointer', color: '#203418',
+            }}>
+            {habit.name}
+          </div>
+        );
+      })}
+    </div>
+    {habits.length > 3 && (
+      <div onClick={() => navigate('/habits')} style={{
+        textAlign: 'center', fontSize: '13px',
+        color: '#888', cursor: 'pointer', marginTop: '4px',
+      }}>
+        More ∨
+      </div>
+    )}
+  </div>
+)}
 
             {/* Today's Tasks */}
             <div>
