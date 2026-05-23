@@ -1,70 +1,122 @@
-# Getting Started with Create React App
+# Your Daily
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A mobile-first Progressive Web App (PWA) for daily task management and habit tracking. Built to eliminate app fatigue by consolidating tasks, habits, and progress tracking into one clean interface.
 
-## Available Scripts
+🔗 **Live App:** https://your-daily.vercel.app
 
-In the project directory, you can run:
+---
 
-### `npm start`
+## Features
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Task Management** — Add, edit, delete tasks with priority levels and due dates
+- **Habit Tracking** — Track daily habits with a full month calendar history
+- **Dashboard** — Today's tasks, overdue, upcoming, and a priority donut chart
+- **Data Export** — Download all your data as a CSV file
+- **PWA** — Installable on iPhone and Android, works like a native app
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+---
 
-### `npm test`
+## Tech Stack
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+| Layer | Technology |
+|-------|------------|
+| Frontend | React JS, React Router DOM |
+| Database | Firebase Firestore |
+| Auth | Firebase Authentication |
+| Hosting | Vercel |
+| Version Control | GitHub |
 
-### `npm run build`
+---
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Getting Started (Local Development)
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Prerequisites
+- Node.js v18+
+- A Firebase project with Firestore and Email/Password Auth enabled
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Installation
 
-### `npm run eject`
+```bash
+git clone https://github.com/saumyaaj14/your-daily.git
+cd your-daily
+npm install
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### Firebase Setup
+Create a `.env` file in the root with your Firebase config:
+REACT_APP_FIREBASE_API_KEY=your_api_key
+REACT_APP_FIREBASE_AUTH_DOMAIN=your_auth_domain
+REACT_APP_FIREBASE_PROJECT_ID=your_project_id
+REACT_APP_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+REACT_APP_FIREBASE_APP_ID=your_app_id
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Run Locally
+```bash
+npm start
+```
+Opens at `http://localhost:3000`
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+---
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## Project Structure
+src/
+├── assets/illustrations/   # SVG illustrations
+├── components/             # Reusable components
+│   ├── BottomNav.js
+│   ├── TaskForm.js
+│   ├── AddHabitForm.js
+│   └── ViewHabit.js
+├── firebase/
+│   └── config.js
+├── pages/
+│   ├── LandingPage.js
+│   ├── SignUpPage.js
+│   ├── LoginPage.js
+│   ├── Dashboard.js
+│   ├── TaskDump.js
+│   ├── HabitTracker.js
+│   └── ProfilePage.js
+└── App.js
 
-## Learn More
+---
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+## Deployment
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Hosted on Vercel with automatic deployment from the `main` branch on GitHub.
 
-### Code Splitting
+To deploy updates:
+```bash
+git add .
+git commit -m "your message"
+git push
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+---
 
-### Analyzing the Bundle Size
+## screens
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+| Screen | Description |
+|--------|-------------|
+| Landing | Entry point with Login and Sign Up |
+| Sign Up | Account registration |
+| Login | Authentication |
+| Dashboard | Home with tasks, habits, and analytics |
+| Task Dump | Full task list with filters |
+| Habit Tracker | Daily habit tracking |
+| Profile | Account settings and data export |
 
-### Making a Progressive Web App
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## Product Documentation
 
-### Advanced Configuration
+Built as part of a PM portfolio project. Designed in Figma, developed with React JS and Firebase.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+- PRD and User Stories available on request
+- QA Test Cases and Bug Reports maintained separately
 
-### Deployment
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+## License
 
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+This project (v1.0) is for portfolio purposes.
