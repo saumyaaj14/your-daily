@@ -2,17 +2,22 @@
 
 A mobile-first Progressive Web App (PWA) for daily task management and habit tracking. Built to eliminate app fatigue by consolidating tasks, habits, and progress tracking into one clean interface.
 
+---
+
+## Product Documentation
+
+🔗 **Notion Link:** https://verbena-cemetery-a08.notion.site/Your-Daily-Productivity-App-366258ebddfb800fa80ae9b3fa46e41d?source=copy_link \
 🔗 **Live App:** https://your-daily.vercel.app
 
 ---
 
 ## Features
 
-- **Task Management** — Add, edit, delete tasks with priority levels and due dates
-- **Habit Tracking** — Track daily habits with a full month calendar history
-- **Dashboard** — Today's tasks, overdue, upcoming, and a priority donut chart
-- **Data Export** — Download all your data as a CSV file
-- **PWA** — Installable on iPhone and Android, works like a native app
+- **Task Management:** Add, edit, delete tasks with priority levels and due dates
+- **Habit Tracking:** Track daily habits with a full month calendar history
+- **Dashboard:** Today's tasks, overdue, upcoming, and a priority donut chart
+- **Data Export:** Download all your data as a CSV file
+- **PWA:** Installable on iPhone and Android, works like a native app
 
 ---
 
@@ -57,9 +62,11 @@ npm start
 ```
 Opens at `http://localhost:3000`
 
----
+
 
 ## Project Structure
+
+````
 src/
 ├── assets/illustrations/   # SVG illustrations
 ├── components/             # Reusable components
@@ -79,7 +86,7 @@ src/
 │   └── ProfilePage.js
 └── App.js
 
----
+````
 
 ## Deployment
 
@@ -92,7 +99,6 @@ git commit -m "your message"
 git push
 ```
 
----
 
 ## screens
 
