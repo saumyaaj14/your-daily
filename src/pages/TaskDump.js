@@ -4,12 +4,15 @@ import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc } 
 import BottomNav from '../components/BottomNav';
 import TaskForm from '../components/TaskForm';
 
+const FILTERS = ['To do', 'Completed', 'High', 'Medium', 'Low'];
+
 function TaskDump() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
-  const [filter, setFilter] = useState('todo');
+  const [activeFilter, setActiveFilter] = useState(null);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [userName, setUserName] = useState('');
 
   const today = new Date();
@@ -33,11 +36,7 @@ function TaskDump() {
     for (let i = -3; i <= 3; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
-      days.push({
-        dayName: dayNames[d.getDay()],
-        date: d.getDate(),
-        isToday: i === 0,
-      });
+      days.push({ dayName: dayNames[d.getDay()], date: d.getDate(), isToday: i === 0 });
     }
     return days;
   };
@@ -73,10 +72,7 @@ function TaskDump() {
         setTasks(tasks.map(t => t.id === editingTask.id ? { ...t, ...taskData } : t));
       } else {
         const docRef = await addDoc(collection(db, 'tasks'), {
-          ...taskData,
-          userId: user.uid,
-          completed: false,
-          createdAt: new Date(),
+          ...taskData, userId: user.uid, completed: false, createdAt: new Date(),
         });
         setTasks([...tasks, { id: docRef.id, ...taskData, userId: user.uid, completed: false }]);
       }
@@ -116,8 +112,29 @@ function TaskDump() {
     return `${day}${suffix} ${months[d.getMonth()]}`;
   };
 
-  const activeTasks = tasks.filter(t => !t.completed);
-  const completedTasks = tasks.filter(t => t.completed);
+  const priorityColor = (p) => {
+    const pl = p?.toLowerCase();
+    return pl === 'high' ? '#FF0000' : pl === 'medium' ? '#FFB800' : '#008DB7';
+  };
+
+  const getFilteredTasks = () => {
+    switch (activeFilter) {
+      case 'To do':
+        return tasks.filter(t => !t.completed);
+      case 'Completed':
+        return tasks.filter(t => t.completed);
+      case 'High':
+        return tasks.filter(t => !t.completed && t.priority?.toLowerCase() === 'high');
+      case 'Medium':
+        return tasks.filter(t => !t.completed && t.priority?.toLowerCase() === 'medium');
+      case 'Low':
+        return tasks.filter(t => !t.completed && t.priority?.toLowerCase() === 'low');
+      default:
+        return tasks.filter(t => !t.completed);
+    }
+  };
+
+  const filteredTasks = getFilteredTasks();
   const isEmpty = tasks.length === 0;
 
   if (loading) return (
@@ -134,37 +151,111 @@ function TaskDump() {
       fontFamily: "'Plus Jakarta Sans', sans-serif",
       paddingBottom: '80px',
     }}>
+
+      {/* Blur overlay — rendered at root level so it covers everything */}
+      {filterOpen && (
+        <div
+          onClick={() => setFilterOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+            zIndex: 200,
+          }}
+        >
+          {/* Filter cards — top right, stop clicks from closing */}
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              position: 'absolute',
+              top: '160px',
+              right: '20px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+            }}
+          >
+            {FILTERS.map(f => (
+              <div
+                key={f}
+                onClick={() => { setActiveFilter(f); setFilterOpen(false); }}
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '10px',
+                  width: '92px',
+                  height: '28px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '3px 4px 4px rgba(0,0,0,0.15)',
+                  fontSize: '13px',
+                  fontWeight: 400,
+                  color: '#000000',
+                }}
+              >
+                {f}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div style={{ padding: '50px 20px 0 20px' }}>
 
-        {/* Header */}
-        <div style={{ fontSize: '36px', fontWeight: 800, color: '#203418' }}>
-          Hey {userName},
-        </div>
-        <div style={{ fontSize: '14px', color: '#203418', marginTop: '4px', marginBottom: '16px' }}>
-          {formatDate(today)}
+        {/* Header row */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ fontSize: '36px', fontWeight: 800, color: '#203418' }}>
+              Hey {userName},
+            </div>
+            <div style={{ fontSize: '12px', fontWeight: 400, color: '#000000', marginTop: '4px' }}>
+              {formatDate(today)}
+            </div>
+          </div>
+          <div
+            onClick={() => { setEditingTask(null); setShowForm(true); }}
+            style={{
+              backgroundColor: '#E97C3B',
+              borderRadius: '5px',
+              width: '79px',
+              height: '27px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              marginTop: '8px',
+              flexShrink: 0,
+              boxShadow: '3px 4px 4px rgba(0,0,0,0.14)',
+            }}
+          >
+            <span style={{ color: '#F2F2F2', fontSize: '12px', fontWeight: 700 }}>Add</span>
+          </div>
         </div>
 
         {/* Calendar Strip */}
-        <div style={{ marginBottom: '20px' }}>
+        <div style={{ marginTop: '16px', marginBottom: '20px' }}>
           <div style={{
-            textAlign: 'right', fontSize: '12px',
-            fontWeight: 600, color: '#203418', marginBottom: '8px',
+            textAlign: 'right', fontSize: '14px',
+            fontWeight: 700, color: '#000000', marginBottom: '8px',
           }}>
             {monthYear}
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             {getCalendarDays().map((day, i) => (
               <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontSize: '10px', color: '#888', fontWeight: 600 }}>{day.dayName}</span>
+                <span style={{ fontSize: '10px', color: '#000000', fontWeight: 400 }}>{day.dayName}</span>
                 <div style={{
-                  width: '32px', height: '32px', borderRadius: '50%',
-                  backgroundColor: day.isToday ? '#4A6741' : '#FFFFFF',
+                  width: '40px', height: '40px', borderRadius: '50%',
+                  backgroundColor: day.isToday ? '#839788' : '#FFFFFF',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: day.isToday ? 'none' : '0 2px 4px rgba(0,0,0,0.1)',
+                  boxShadow: '0px 4px 4px rgba(0,0,0,0.15)',
                 }}>
                   <span style={{
                     fontSize: '13px', fontWeight: 700,
-                    color: day.isToday ? '#FFFFFF' : '#203418',
+                    color: day.isToday ? '#F2F2F2' : '#000000',
                   }}>
                     {day.date}
                   </span>
@@ -176,7 +267,7 @@ function TaskDump() {
 
         <hr style={{ border: 'none', borderTop: '1px solid #e0e0e0', marginBottom: '24px' }} />
 
-        {/* EMPTY STATE */}
+        {/* Empty state */}
         {isEmpty ? (
           <div style={{
             display: 'flex', flexDirection: 'column',
@@ -188,118 +279,145 @@ function TaskDump() {
             <div
               onClick={() => { setEditingTask(null); setShowForm(true); }}
               style={{
-                backgroundColor: '#E8823A',
-                borderRadius: '30px',
-                padding: '12px 40px',
-                cursor: 'pointer',
+                backgroundColor: '#E8823A', borderRadius: '30px',
+                padding: '12px 40px', cursor: 'pointer',
                 boxShadow: '0px 4px 6px rgba(0,0,0,0.2)',
-              }}>
+              }}
+            >
               <span style={{ color: '#FFFFFF', fontSize: '16px', fontWeight: 600 }}>Begin</span>
             </div>
           </div>
 
         ) : (
           <div>
-            {/* Filter toggles + Add button */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {['todo', 'completed'].map(f => (
+            {/* Task List header */}
+            <div style={{
+              display: 'flex', justifyContent: 'space-between',
+              alignItems: 'center', marginBottom: '16px',
+            }}>
+              <span style={{ fontSize: '16px', fontWeight: 700, color: '#053220' }}>Task List</span>
+
+              {activeFilter ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <div
-                    key={f}
-                    onClick={() => setFilter(f)}
+                    onClick={() => setFilterOpen(true)}
                     style={{
-                      padding: '6px 16px',
-                      borderRadius: '30px',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      backgroundColor: filter === f ? '#7C972F' : '#E0E0E0',
-                      color: filter === f ? '#FFFFFF' : '#555',
-                    }}>
-                    {f === 'todo' ? 'To Do' : 'Completed'}
+                      backgroundColor: '#448080', borderRadius: '30px',
+                      padding: '6px 16px', cursor: 'pointer',
+                      boxShadow: '3px 4px 4px rgba(0,0,0,0.15)',
+                    }}
+                  >
+                    <span style={{ color: '#FFFFFF', fontSize: '13px', fontWeight: 400 }}>
+                      {activeFilter}
+                    </span>
                   </div>
-                ))}
-              </div>
-
-              <div
-                onClick={() => { setEditingTask(null); setShowForm(true); }}
-                style={{
-                  backgroundColor: '#E8823A',
-                  borderRadius: '30px',
-                  padding: '8px 20px',
-                  cursor: 'pointer',
-                  boxShadow: '0px 4px 6px rgba(0,0,0,0.2)',
-                }}>
-                <span style={{ color: '#FFFFFF', fontSize: '14px', fontWeight: 600 }}>Add</span>
-              </div>
+                  <div
+                    onClick={() => setActiveFilter(null)}
+                    style={{
+                      fontSize: '18px', color: '#888',
+                      cursor: 'pointer', lineHeight: 1, padding: '2px 4px',
+                    }}
+                  >
+                    ×
+                  </div>
+                </div>
+              ) : (
+                <div
+                  onClick={() => setFilterOpen(true)}
+                  style={{
+                    width: '36px', height: '36px', borderRadius: '50%',
+                    backgroundColor: '#FFFFFF',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', boxShadow: '3px 4px 4px rgba(0,0,0,0.15)',
+                  }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                    <line x1="2" y1="5" x2="16" y2="5" stroke="#444" strokeWidth="1.5" strokeLinecap="round"/>
+                    <line x1="2" y1="9" x2="16" y2="9" stroke="#444" strokeWidth="1.5" strokeLinecap="round"/>
+                    <line x1="2" y1="13" x2="16" y2="13" stroke="#444" strokeWidth="1.5" strokeLinecap="round"/>
+                    <circle cx="6" cy="5" r="2" fill="#F2F2F2" stroke="#444" strokeWidth="1.5"/>
+                    <circle cx="12" cy="9" r="2" fill="#F2F2F2" stroke="#444" strokeWidth="1.5"/>
+                    <circle cx="7" cy="13" r="2" fill="#F2F2F2" stroke="#444" strokeWidth="1.5"/>
+                  </svg>
+                </div>
+              )}
             </div>
 
-            {/* Task List */}
-            <div style={{ fontSize: '16px', fontWeight: 700, color: '#203418', marginBottom: '12px' }}>
-              Task List
-            </div>
-
-            {(filter === 'todo' ? activeTasks : completedTasks).map(task => (
+            {/* Task rows */}
+            {filteredTasks.map(task => (
               <div
                 key={task.id}
                 style={{
                   display: 'flex', alignItems: 'center',
-                  gap: '12px', padding: '12px 0',
+                  gap: '10px', padding: '12px 0',
                   borderBottom: '1px solid #f0f0f0',
                 }}
               >
-                {/* Checkbox - toggles completion */}
-                <div
-                  onClick={() => handleComplete(task)}
-                  style={{
-                    width: '26px', height: '26px', borderRadius: '50%',
-                    border: '2px solid #7C972F', flexShrink: 0,
-                    backgroundColor: task.completed ? '#7C972F' : 'transparent',
-                    cursor: 'pointer',
-                  }}
-                />
+                {/* Priority dot */}
+                <div style={{
+                  width: '15px', height: '15px', borderRadius: '50%', flexShrink: 0,
+                  backgroundColor: priorityColor(task.priority),
+                }} />
 
-                {/* Title - opens edit form */}
+                {/* Title */}
                 <span
                   onClick={() => { setEditingTask(task); setShowForm(true); }}
                   style={{
-                    fontSize: '15px', fontWeight: 700,
-                    color: '#203418', flex: 1,
+                    fontSize: '14px', fontWeight: 700,
+                    color: '#000000', cursor: 'pointer',
                     textDecoration: task.completed ? 'line-through' : 'none',
-                    cursor: 'pointer',
-                  }}>
+                    flexShrink: 1,
+                  }}
+                >
                   {task.title}
                 </span>
 
-                {/* Priority dot */}
-                <div style={{
-                  width: '10px', height: '10px', borderRadius: '50%', flexShrink: 0,
-                  backgroundColor:
-                    task.priority === 'High' ? '#E53935' :
-                    task.priority === 'Medium' ? '#FFC107' : '#2196F3'
-                }} />
+                {/* Due date pill — right after title */}
+                {task.dueDate && (
+                  <div style={{
+                    border: '1px solid #7C972F',
+                    borderRadius: '30px',
+                    padding: '3px 10px',
+                    fontSize: '12px', fontWeight: 400,
+                    color: '#000000', flexShrink: 0,
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {formatDueDate(task.dueDate)}
+                  </div>
+                )}
 
-                {/* Due date pill */}
-                <div style={{
-                  border: '1px solid #ccc', borderRadius: '30px',
-                  padding: '4px 10px', fontSize: '11px',
-                  color: '#555', flexShrink: 0,
-                }}>
-                  {formatDueDate(task.dueDate)}
+                {/* Spacer pushes checkbox to the right */}
+                <div style={{ flex: 1 }} />
+
+                {/* Checkbox */}
+                <div
+                  onClick={() => handleComplete(task)}
+                  style={{
+                    width: '20px', height: '20px', borderRadius: '4px', flexShrink: 0,
+                    border: '2px solid #7C972F',
+                    backgroundColor: task.completed ? '#7C972F' : 'transparent',
+                    cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
+                >
+                  {task.completed && (
+                    <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+                      <path d="M1 5L4.5 8.5L11 1" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
                 </div>
               </div>
             ))}
 
-            {(filter === 'todo' ? activeTasks : completedTasks).length === 0 && (
+            {filteredTasks.length === 0 && (
               <p style={{ fontSize: '13px', color: '#888', textAlign: 'center', marginTop: '24px' }}>
-                {filter === 'todo' ? 'No active tasks.' : 'No completed tasks yet.'}
+                No tasks found.
               </p>
             )}
           </div>
         )}
       </div>
 
-      {/* Task Form Modal */}
       {showForm && (
         <TaskForm
           task={editingTask}
