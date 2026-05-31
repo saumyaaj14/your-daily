@@ -5,6 +5,7 @@ import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/fire
 import BottomNav from '../components/BottomNav';
 import emptyIllustration1 from '../assets/illustrations/EmptyDashboard2-illustration.svg';
 import emptyIllustration2 from '../assets/illustrations/EmptyDashboard1-illustration.svg';
+import overdueIcon from '../assets/illustrations/overdue.svg';
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -12,6 +13,9 @@ function Dashboard() {
   const [tasks, setTasks] = useState([]);
   const [habits, setHabits] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [todayExpanded, setTodayExpanded] = useState(false);
+  const [overdueExpanded, setOverdueExpanded] = useState(false);
+  const [upcomingExpanded, setUpcomingExpanded] = useState(false);
 
   // Date helpers
   const today = new Date();
@@ -50,12 +54,15 @@ function Dashboard() {
       setLoading(false);
     }
   }, []);
+
   const todayKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-const parseLocalDate = (dateStr) => {
+
+  const parseLocalDate = (dateStr) => {
     if (!dateStr) return null;
     const [year, month, day] = String(dateStr).split('-').map(Number);
     return new Date(year, month - 1, day);
   };
+
   const fetchData = async (uid) => {
     try {
       const tasksSnap = await getDocs(query(collection(db, 'tasks'), where('userId', '==', uid)));
@@ -67,6 +74,7 @@ const parseLocalDate = (dateStr) => {
     }
     setLoading(false);
   };
+
   const handleToggleHabit = async (habit) => {
     const logs = habit.logs || [];
     const isDone = logs.includes(todayKey);
@@ -79,10 +87,16 @@ const parseLocalDate = (dateStr) => {
       console.error(e);
     }
   };
+
   const handleCompleteTask = async (task) => {
+    const nowCompleted = !task.completed;
+    const updates = {
+      completed: nowCompleted,
+      completedAt: nowCompleted ? todayKey : null,
+    };
     try {
-      await updateDoc(doc(db, 'tasks', task.id), { completed: !task.completed });
-      setTasks(tasks.map(t => t.id === task.id ? { ...t, completed: !t.completed } : t));
+      await updateDoc(doc(db, 'tasks', task.id), updates);
+      setTasks(tasks.map(t => t.id === task.id ? { ...t, ...updates } : t));
     } catch (e) {
       console.error(e);
     }
@@ -90,26 +104,26 @@ const parseLocalDate = (dateStr) => {
 
   // Task filtering
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+  const todayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
-const todayTasks = tasks.filter(t => {
+  const todayTasks = tasks.filter(t => {
     const d = parseLocalDate(t.dueDate);
     return !t.completed && d && d >= todayStart && d < todayEnd;
   });
-const overdueTasks = tasks
+
+  const overdueTasks = tasks
     .filter(t => {
       const d = parseLocalDate(t.dueDate);
       return !t.completed && d && d < todayStart;
     })
-    .sort((a, b) => parseLocalDate(b.dueDate) - parseLocalDate(a.dueDate))
-    .slice(0, 3);
-const upcomingTasks = tasks
+    .sort((a, b) => parseLocalDate(b.dueDate) - parseLocalDate(a.dueDate));
+
+  const upcomingTasks = tasks
     .filter(t => {
       const d = parseLocalDate(t.dueDate);
       return !t.completed && d && d >= todayEnd;
     })
-    .sort((a, b) => parseLocalDate(a.dueDate) - parseLocalDate(b.dueDate))
-    .slice(0, 3);
+    .sort((a, b) => parseLocalDate(a.dueDate) - parseLocalDate(b.dueDate));
 
   const isEmpty = tasks.length === 0 && habits.length === 0;
 
@@ -119,6 +133,20 @@ const upcomingTasks = tasks
   const medium = pendingTasks.filter(t => t.priority === 'Medium').length;
   const low = pendingTasks.filter(t => t.priority === 'Low').length;
   const total = pendingTasks.length || 1;
+
+  // Helper: days ago string for overdue tasks
+  const getDaysAgo = (dateStr) => {
+    const d = parseLocalDate(dateStr);
+    if (!d) return '';
+    const diffMs = todayStart - d;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays === 1) return '1 day ago';
+    return `${diffDays} days ago`;
+  };
+
+  // Priority colors (updated from Figma)
+  const priorityColor = (p) =>
+    p === 'High' ? '#FF0000' : p === 'Medium' ? '#FFB800' : '#008DB7';
 
   const DonutChart = () => {
     const size = 120;
@@ -132,17 +160,17 @@ const upcomingTasks = tasks
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <circle cx="60" cy="60" r={radius} fill="none" stroke="#e0e0e0" strokeWidth="14" />
         {high > 0 && (
-          <circle cx="60" cy="60" r={radius} fill="none" stroke="#E53935"
+          <circle cx="60" cy="60" r={radius} fill="none" stroke="#FF0000"
             strokeWidth="14" strokeDasharray={`${highDash} ${circumference}`}
             strokeDashoffset="0" transform="rotate(-90 60 60)" />
         )}
         {medium > 0 && (
-          <circle cx="60" cy="60" r={radius} fill="none" stroke="#FFC107"
+          <circle cx="60" cy="60" r={radius} fill="none" stroke="#FFB800"
             strokeWidth="14" strokeDasharray={`${medDash} ${circumference}`}
             strokeDashoffset={`${-highDash}`} transform="rotate(-90 60 60)" />
         )}
         {low > 0 && (
-          <circle cx="60" cy="60" r={radius} fill="none" stroke="#2196F3"
+          <circle cx="60" cy="60" r={radius} fill="none" stroke="#008DB7"
             strokeWidth="14" strokeDasharray={`${lowDash} ${circumference}`}
             strokeDashoffset={`${-(highDash + medDash)}`} transform="rotate(-90 60 60)" />
         )}
@@ -154,45 +182,88 @@ const upcomingTasks = tasks
     );
   };
 
-const TaskRow = ({ task }) => (
+  // Updated TaskRow: dot on LEFT, checkbox icon on RIGHT, "X days ago" label optional
+  const TaskRow = ({ task, showDaysAgo = false }) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 0' }}>
+      {/* Priority dot — LEFT */}
+      <div style={{
+        width: '12px', height: '12px', borderRadius: '50%', flexShrink: 0,
+        backgroundColor: priorityColor(task.priority),
+      }} />
+
+      {/* Title + optional days-ago */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+        <span style={{
+          fontSize: '14px', fontWeight: 700, color: '#000000',
+          textDecoration: task.completed ? 'line-through' : 'none',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>
+          {task.title}
+        </span>
+        {showDaysAgo && (
+          <span style={{ fontSize: '11px', color: '#ACACAC', fontWeight: 400, whiteSpace: 'nowrap' }}>
+            {getDaysAgo(task.dueDate)}
+          </span>
+        )}
+      </div>
+
+      {/* Checkbox — RIGHT */}
       <div
         onClick={() => handleCompleteTask(task)}
         style={{
-          width: '24px', height: '24px', borderRadius: '50%',
-          border: '2px solid #7C972F', flexShrink: 0,
+          width: '20px', height: '20px', borderRadius: '4px', flexShrink: 0,
+          border: '2px solid #7C972F',
           backgroundColor: task.completed ? '#7C972F' : 'transparent',
           cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
-      />
-      <span style={{
-        fontSize: '14px', fontWeight: 700, color: '#203418', flex: 1,
-        textDecoration: task.completed ? 'line-through' : 'none',
-      }}>
-        {task.title}
-      </span>
-      <div style={{
-        width: '10px', height: '10px', borderRadius: '50%', flexShrink: 0,
-        backgroundColor: task.priority === 'High' ? '#E53935' : task.priority === 'Medium' ? '#FFC107' : '#2196F3'
-      }} />
+      >
+        {task.completed && (
+          <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+            <path d="M1 5L4.5 8.5L11 1" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </div>
+    </div>
+  );
+
+  // Card wrapper for task lists — tappable to expand
+  const TaskCard = ({ children, onClick, expanded, hasMore }) => (
+    <div
+      onClick={onClick}
+      style={{
+        backgroundColor: '#FFFFFF',
+        borderRadius: '10px',
+        padding: '8px 16px 6px 16px',
+        boxShadow: '3px 4px 4px rgba(0,0,0,0.15)',
+        cursor: hasMore && !expanded ? 'pointer' : 'default',
+      }}
+    >
+      {children}
+      {hasMore && (
+        <div style={{
+          textAlign: 'center',
+          fontSize: '12px',
+          color: '#ACACAC',
+          paddingTop: '2px',
+          marginBottom: '-4px',
+          userSelect: 'none',
+          lineHeight: '1',
+        }}>
+          {expanded ? '∧' : '∨'}
+        </div>
+      )}
     </div>
   );
 
   const SectionHeader = ({ title, color, icon }) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
       {icon && <span>{icon}</span>}
-      <span style={{ fontSize: '16px', fontWeight: 700, color: color || '#203418' }}>{title}</span>
+      <span style={{ fontSize: '16px', fontWeight: 700, color: color || '#053220' }}>{title}</span>
     </div>
   );
 
-  const MoreLink = () => (
-    <div onClick={() => navigate('/tasks')} style={{
-      textAlign: 'center', fontSize: '13px', color: '#888',
-      cursor: 'pointer', marginTop: '4px',
-    }}>
-      More ∨
-    </div>
-  );
+
 
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -216,50 +287,50 @@ const TaskRow = ({ task }) => (
         <div style={{ fontSize: '36px', fontWeight: 800, color: '#203418' }}>
           Hey {userName},
         </div>
-        <div style={{ fontSize: '14px', color: '#203418', marginTop: '4px', marginBottom: '16px' }}>
+        {/* Date: 12px, weight 400, color #000 */}
+        <div style={{ fontSize: '12px', fontWeight: 400, color: '#000000', marginTop: '4px', marginBottom: '16px' }}>
           {formatDate(today)}
         </div>
 
         {/* Calendar Strip */}
-<div style={{ marginBottom: '20px' }}>
-  <div style={{
-    textAlign: 'right',
-    fontSize: '12px',
-    fontWeight: 600,
-    color: '#203418',
-    marginBottom: '8px',
-  }}>
-    {monthYear}
-  </div>
-  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-    {getCalendarDays().map((day, i) => (
-      <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-        <span style={{ fontSize: '10px', color: '#888', fontWeight: 600 }}>{day.dayName}</span>
-        <div style={{
-          width: '32px', height: '32px', borderRadius: '50%',
-          backgroundColor: day.isToday ? '#4A6741' : '#FFFFFF',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: day.isToday ? 'none' : '0 2px 4px rgba(0,0,0,0.1)',
-        }}>
-          <span style={{
-            fontSize: '13px', fontWeight: 700,
-            color: day.isToday ? '#FFFFFF' : '#203418',
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{
+            textAlign: 'right',
+            fontSize: '14px',
+            fontWeight: 700,         // bumped to 700 per Figma
+            color: '#000000',
+            marginBottom: '8px',
           }}>
-            {day.date}
-          </span>
+            {monthYear}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            {getCalendarDays().map((day, i) => (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                {/* Day name: weight 400 per Figma */}
+                <span style={{ fontSize: '10px', color: '#000000', fontWeight: 400 }}>{day.dayName}</span>
+                <div style={{
+                  width: '40px', height: '40px', borderRadius: '50%',
+                  backgroundColor: day.isToday ? '#839788' : '#FFFFFF',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0px 4px 4px rgba(0,0,0,0.15)',
+                }}>
+                  <span style={{
+                    fontSize: '13px', fontWeight: 700,
+                    color: day.isToday ? '#F2F2F2' : '#000000',
+                  }}>
+                    {day.date}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-    ))}
-  </div>
-</div>
 
         <hr style={{ border: 'none', borderTop: '1px solid #e0e0e0', marginBottom: '24px' }} />
 
         {/* EMPTY STATE */}
         {isEmpty ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-
-            {/* Action Buttons */}
             <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
               <div onClick={() => navigate('/tasks')} style={{
                 backgroundColor: '#4A9B8E', borderRadius: '30px',
@@ -276,18 +347,11 @@ const TaskRow = ({ task }) => (
                 <span style={{ color: '#FFFFFF', fontSize: '15px', fontWeight: 600 }}>+ Habits</span>
               </div>
             </div>
-
-            {/* Empty text */}
             <p style={{ fontSize: '14px', color: '#888', textAlign: 'center', marginBottom: '16px' }}>
               start adding tasks<br />and habits to start tracking
             </p>
-
-            {/* Small illustration */}
             <img src={emptyIllustration1} alt="" style={{ width: '80px', marginBottom: '8px' }} />
-
-            {/* Big illustration */}
             <img src={emptyIllustration2} alt="" style={{ width: '280px' }} />
-
           </div>
 
         ) : (
@@ -295,74 +359,86 @@ const TaskRow = ({ task }) => (
           /* POPULATED STATE */
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-            {/* Habits quick mark - only if habits exist */}
-{habits.length > 0 && habits.some(h => !(h.logs || []).includes(todayKey)) && (
-  <div>
-    <div style={{ fontSize: '16px', fontWeight: 700, color: '#203418', marginBottom: '12px', textAlign: 'center' }}>
-      Mark Your Habits!
-    </div>
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '8px' }}>
-      {habits.slice(0, 3).map(habit => {
-        const isDone = (habit.logs || []).includes(todayKey);
-        if (isDone) return null;
-        return (
-          <div
-            key={habit.id}
-            onClick={() => handleToggleHabit(habit)}
-            style={{
-              backgroundColor: habit.color || '#BCE4F7',
-              borderRadius: '30px', padding: '8px 16px',
-              fontSize: '13px', fontWeight: 600,
-              cursor: 'pointer', color: '#203418',
-            }}>
-            {habit.name}
-          </div>
-        );
-      })}
-    </div>
-    {habits.length > 3 && (
-      <div onClick={() => navigate('/habits')} style={{
-        textAlign: 'center', fontSize: '13px',
-        color: '#888', cursor: 'pointer', marginTop: '4px',
-      }}>
-        More ∨
-      </div>
-    )}
-  </div>
-)}
+            {/* Habits quick mark */}
+            {habits.length > 0 && habits.some(h => !(h.logs || []).includes(todayKey)) && (
+              <div>
+                {/* "Mark Your Habits!" — #000, 13px, weight 700, centered */}
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#000000', marginBottom: '12px', textAlign: 'center' }}>
+                  Mark Your Habits!
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '8px' }}>
+                  {habits.slice(0, 3).map(habit => {
+                    const isDone = (habit.logs || []).includes(todayKey);
+                    if (isDone) return null;
+                    return (
+                      <div
+                        key={habit.id}
+                        onClick={() => handleToggleHabit(habit)}
+                        style={{
+                          backgroundColor: habit.color || '#BCE4F7',
+                          borderRadius: '40px',
+                          padding: '0 16px',
+                          height: '34px',             // matches Figma 34px height
+                          display: 'flex', alignItems: 'center',
+                          fontSize: '13px', fontWeight: 700,
+                          cursor: 'pointer', color: '#000000',
+                          boxShadow: '3px 4px 4px rgba(0,0,0,0.15)',
+                        }}>
+                        {habit.name}
+                      </div>
+                    );
+                  })}
+                </div>
+                {habits.length > 3 && (
+                  <div onClick={() => navigate('/habits')} style={{
+                    textAlign: 'center', fontSize: '13px',
+                    color: '#888', cursor: 'pointer', marginTop: '4px',
+                  }}>
+                    More ∨
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Today's Tasks */}
             <div>
-              <SectionHeader title="Today's Tasks" color="#4A6741" />
-              {todayTasks.slice(0, 3).map(task => <TaskRow key={task.id} task={task} />)}
-              {todayTasks.length === 0 && (
-                <p style={{ fontSize: '13px', color: '#888' }}>No tasks for today.</p>
-              )}
-              {todayTasks.length > 3 && <MoreLink />}
+              <SectionHeader title="Today's Tasks" color="#053220" />
+              <TaskCard
+                onClick={() => todayTasks.length > 3 && setTodayExpanded(e => !e)}
+                expanded={todayExpanded}
+                hasMore={todayTasks.length > 3}
+              >
+                {(todayExpanded ? todayTasks : todayTasks.slice(0, 3)).map(task => (
+                  <TaskRow key={task.id} task={task} />
+                ))}
+                {todayTasks.length === 0 && (
+                  <p style={{ fontSize: '13px', color: '#888', margin: '8px 0' }}>No tasks for today.</p>
+                )}
+              </TaskCard>
             </div>
 
             {/* Overview + Donut Chart */}
             <div>
-              <SectionHeader title="Overview" />
-              <div style={{ fontSize: '13px', color: '#555', marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
-                <span>Tasks Completed Today: {tasks.filter(t => t.completed).length}</span>
+              <SectionHeader title="Overview" color="#053220" />
+              <div style={{ fontSize: '12px', color: '#053220', marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
+                <span>Tasks Completed Today: {tasks.filter(t => t.completed && t.completedAt === todayKey).length}</span>
                 <span>Tasks Pending: {pendingTasks.length}</span>
               </div>
               <div style={{
-                backgroundColor: '#FFFFFF', borderRadius: '16px',
+                backgroundColor: '#FFFFFF', borderRadius: '10px',
                 padding: '16px', display: 'flex', alignItems: 'center',
-                justifyContent: 'space-between', boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                justifyContent: 'space-between', boxShadow: '3px 4px 4px rgba(0,0,0,0.15)',
               }}>
                 <DonutChart />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {[
-                    { label: 'High', color: '#E53935' },
-                    { label: 'Medium', color: '#FFC107' },
-                    { label: 'Low', color: '#2196F3' },
+                    { label: 'High', color: '#FF0000' },
+                    { label: 'Medium', color: '#FFB800' },
+                    { label: 'Low', color: '#008DB7' },
                   ].map(item => (
                     <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: item.color }} />
-                      <span style={{ fontSize: '12px', color: '#555' }}>{item.label}</span>
+                      <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: item.color }} />
+                      <span style={{ fontSize: '10px', fontWeight: 700, color: '#000000' }}>{item.label}</span>
                     </div>
                   ))}
                 </div>
@@ -372,18 +448,32 @@ const TaskRow = ({ task }) => (
             {/* Overdue Tasks */}
             {overdueTasks.length > 0 && (
               <div>
-                <SectionHeader title="Overdue Tasks" color="#E53935" icon="⚠️" />
-                {overdueTasks.map(task => <TaskRow key={task.id} task={task} />)}
-                <MoreLink />
+                <SectionHeader title="Overdue Tasks" color="#053220" icon={<img src={overdueIcon} alt="" style={{ width: '20px', height: '20px' }} />} />
+                <TaskCard
+                  onClick={() => overdueTasks.length > 3 && setOverdueExpanded(e => !e)}
+                  expanded={overdueExpanded}
+                  hasMore={overdueTasks.length > 3}
+                >
+                  {(overdueExpanded ? overdueTasks : overdueTasks.slice(0, 3)).map(task => (
+                    <TaskRow key={task.id} task={task} showDaysAgo={true} />
+                  ))}
+                </TaskCard>
               </div>
             )}
 
             {/* Upcoming Tasks */}
             {upcomingTasks.length > 0 && (
               <div>
-                <SectionHeader title="Upcoming Tasks" />
-                {upcomingTasks.map(task => <TaskRow key={task.id} task={task} />)}
-                {upcomingTasks.length >= 3 && <MoreLink />}
+                <SectionHeader title="Upcoming Tasks" color="#053220" />
+                <TaskCard
+                  onClick={() => upcomingTasks.length > 3 && setUpcomingExpanded(e => !e)}
+                  expanded={upcomingExpanded}
+                  hasMore={upcomingTasks.length > 3}
+                >
+                  {(upcomingExpanded ? upcomingTasks : upcomingTasks.slice(0, 3)).map(task => (
+                    <TaskRow key={task.id} task={task} />
+                  ))}
+                </TaskCard>
               </div>
             )}
 
