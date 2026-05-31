@@ -125,7 +125,9 @@ function Dashboard() {
     })
     .sort((a, b) => parseLocalDate(a.dueDate) - parseLocalDate(b.dueDate));
 
-  const isEmpty = tasks.length === 0 && habits.length === 0;
+  const isEmpty = tasks.length === 0 && habits.length === 0; // brand new user
+  const noTasksToday = habits.length > 0 && tasks.length === 0; // has habits but no tasks at all
+  const allDoneToday = habits.length > 0 && tasks.length > 0 && todayTasks.length === 0 && overdueTasks.length === 0 && upcomingTasks.length === 0; // all tasks completed
 
   // Donut chart
   const pendingTasks = tasks.filter(t => !t.completed);
@@ -328,7 +330,7 @@ function Dashboard() {
 
         <hr style={{ border: 'none', borderTop: '1px solid #e0e0e0', marginBottom: '24px' }} />
 
-        {/* EMPTY STATE */}
+        {/* BRAND NEW USER — no tasks, no habits */}
         {isEmpty ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
@@ -354,6 +356,61 @@ function Dashboard() {
             <img src={emptyIllustration2} alt="" style={{ width: '280px' }} />
           </div>
 
+        /* ACTIVE USER — has habits but no tasks for today */
+        ) : (noTasksToday || allDoneToday) ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+
+            {/* Habits section */}
+            {habits.some(h => !(h.logs || []).includes(todayKey)) && (
+              <div style={{ width: '100%', marginBottom: '24px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#000000', marginBottom: '12px', textAlign: 'center' }}>
+                  Mark Your Habits!
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                  {habits.slice(0, 3).map(habit => {
+                    const isDone = (habit.logs || []).includes(todayKey);
+                    if (isDone) return null;
+                    return (
+                      <div
+                        key={habit.id}
+                        onClick={() => handleToggleHabit(habit)}
+                        style={{
+                          backgroundColor: habit.color || '#BCE4F7',
+                          borderRadius: '40px',
+                          width: '100px',
+                          height: '34px',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '13px', fontWeight: 700,
+                          cursor: 'pointer', color: '#000000',
+                          boxShadow: '3px 4px 4px rgba(0,0,0,0.15)',
+                        }}>
+                        {habit.name}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <p style={{ fontSize: '11px', fontWeight: 400, color: '#000000', textAlign: 'center', marginBottom: '16px' }}>
+              start adding tasks<br />and habits to start tracking
+            </p>
+            <div
+              onClick={() => navigate('/tasks')}
+              style={{
+                backgroundColor: '#448080',
+                borderRadius: '40px',
+                padding: '10px 28px',
+                cursor: 'pointer',
+                boxShadow: '0px 4px 6px rgba(0,0,0,0.2)',
+                marginBottom: '24px',
+              }}>
+              <span style={{ color: '#F2F2F2', fontSize: '14px', fontWeight: 700 }}>+ Tasks</span>
+            </div>
+            <img src={emptyIllustration1} alt="" style={{ width: '80px', marginBottom: '8px' }} />
+            <img src={emptyIllustration2} alt="" style={{ width: '280px' }} />
+          </div>
+
         ) : (
 
           /* POPULATED STATE */
@@ -366,7 +423,7 @@ function Dashboard() {
                 <div style={{ fontSize: '13px', fontWeight: 700, color: '#000000', marginBottom: '12px', textAlign: 'center' }}>
                   Mark Your Habits!
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '8px' }}>
                   {habits.slice(0, 3).map(habit => {
                     const isDone = (habit.logs || []).includes(todayKey);
                     if (isDone) return null;
@@ -377,9 +434,9 @@ function Dashboard() {
                         style={{
                           backgroundColor: habit.color || '#BCE4F7',
                           borderRadius: '40px',
-                          padding: '0 16px',
-                          height: '34px',             // matches Figma 34px height
-                          display: 'flex', alignItems: 'center',
+                          width: '100px',
+                          height: '34px',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: '13px', fontWeight: 700,
                           cursor: 'pointer', color: '#000000',
                           boxShadow: '3px 4px 4px rgba(0,0,0,0.15)',
